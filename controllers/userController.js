@@ -1,0 +1,120 @@
+import user from "../models/user.js";
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+
+export function createUser(req, res){
+    
+    if(req.user==null){
+        res.status(401).json({
+            message:"You are not authenticated, please login. Please login to create a user "
+        })
+
+        return
+    }
+
+        if(req.user.role != "admin"){
+
+           res.status(403).json({
+                message:"You are not authorized to create a user"
+            })
+
+            return    
+        }
+    
+
+    const hashedPassword = bcrypt.hashSync(req.body.password, 10);
+
+    const newUser = new user(
+        {
+            email:req.body.email,
+            firstName:req.body.firstName,
+            lastName:req.body.lastName,
+            password:hashedPassword
+        }
+
+    );
+
+    newUser.save() .then(
+        ()=>{
+            res.json({
+                message: "User created successfully"
+            })
+        }
+    ).catch(
+        ()=>{
+            res.status(500).json({
+                message: "Error creating user"
+            })
+        }
+    )
+}
+
+
+
+export function logginUser(req, res){
+
+    user.findOne(
+        {
+            email:req.body.email 
+        }
+    ).then(
+        (user)=>{
+            if(user==null){
+                res.status(404).json(
+                    {
+                       message: "User not found"
+                    }
+                )
+            }
+
+            else{
+                const isPasswordMatching = bcrypt.compareSync(req.body.password, user.password);
+
+                if(isPasswordMatching){
+
+                    const token = jwt.sign(
+                        {
+                            email:user.email,
+                            firstName:user.firstName,
+                            lastName:user.lastName,
+                            role:user.role,
+                            isBlocked:user.isBlocked,
+                            isEmailVerified:user.isEmailVerified
+                        },
+                        "jwt-secret"
+                    )
+
+                    res.json(
+                        {
+                            message: "Login successful",
+                            token: token
+                        }
+                    )
+                }
+
+                else{
+                    res.status(401).json(
+                        {
+                            message: "Invalid password"
+                        }
+                    )
+                }
+            }
+        }
+    )
+}
+
+
+export function isAdmin(req){
+    //authentication
+    if(req.user==null){
+        return false;
+    }
+
+    //authorization
+    if(req.user.role != "admin"){
+        return false;
+    }
+
+    return true;
+}
