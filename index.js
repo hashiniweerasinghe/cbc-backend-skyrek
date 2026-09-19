@@ -3,21 +3,29 @@ import mongoose from "mongoose";
 import userRouter from './roots/userRouter.js';
 import jwt from "jsonwebtoken";
 import productRouter from './roots/productRouter.js';
+import cors from "cors";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const app = express();
 
+app.use(cors());
 app.use(express.json())
 
 //Authentication middleware. middleware for token
 
 app.use((req, res, next) => {
+
+    
     let token = req.headers.authorization;
+    
 
     if (token !=null) {
 
          token = token.replace("Bearer ", "");
          console.log(token);
-         jwt.verify(token, "jwt-secret",
+         jwt.verify(token, process.env.JWT_SECRET,
 
             (err, decoded) => {
                 
@@ -38,7 +46,7 @@ app.use((req, res, next) => {
 })
 
 
-const connectionString= "mongodb+srv://admin:123@cluster0.16ooybq.mongodb.net/?appName=Cluster0"
+const connectionString= process.env.MONGO_URI;
 
 
 mongoose.connect(connectionString).then(
@@ -47,13 +55,16 @@ mongoose.connect(connectionString).then(
     }  
 
 ).catch(
-    () => {
+    (err) => {
         console.error("Error connecting to MongoDB:");
+        console.error(err);
     }
 );
 
-app.use("/users", userRouter);
-app.use("/products", productRouter);
+
+
+app.use("/api/users", userRouter);
+app.use("/api/products", productRouter);
 
 
 app.listen(5000, 
@@ -62,4 +73,5 @@ app.listen(5000,
     console.log("Thank you")
     }
 );
+
 
